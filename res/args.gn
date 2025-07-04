@@ -1,0 +1,3 @@
+# Set build arguments here. See `gn help buildargs`.
+enable_base_tracing = false
+enable_nacl=false

@@ -1,0 +1,109 @@
+add_library(absl STATIC)
+
+target_include_directories(absl
+PRIVATE
+    third_party/abseil-cpp
+)
+
+if(WIN32)
+    target_compile_definitions(absl PRIVATE -DABSL_ALLOCATOR_NOTHROW=1 -D_ENABLE_EXTENDED_ALIGNED_STORAGE)
+endif()
+
+target_compile_options(absl PRIVATE "/FC")
+
+include(cmake/nice_target_sources.cmake)
+
+  nice_target_sources(absl "third_party/abseil-cpp"
+    PRIVATE
+   absl/types/bad_optional_access.h
+    absl/types/bad_optional_access.cc
+    absl/types/bad_variant_access.h
+    absl/types/bad_variant_access.cc
+    absl/strings/string_view.h
+    absl/strings/string_view.cc
+    absl/strings/match.h
+    absl/strings/match.cc
+    absl/base/internal/throw_delegate.h
+    absl/base/internal/throw_delegate.cc
+    absl/base/internal/raw_logging.h
+    absl/base/internal/raw_logging.cc
+    absl/base/internal/spinlock_wait.h
+    absl/base/internal/spinlock_wait.cc
+    absl/base/internal/thread_identity.h
+    absl/base/internal/thread_identity.cc
+    absl/base/internal/low_level_alloc.h
+    absl/base/internal/low_level_alloc.cc
+    absl/base/internal/spinlock.h
+    absl/base/internal/spinlock.cc
+    absl/base/internal/cycleclock.h
+    absl/base/internal/cycleclock.cc
+    absl/base/internal/sysinfo.h
+    absl/base/internal/sysinfo.cc
+    absl/strings/ascii.h
+    absl/strings/ascii.cc
+    absl/strings/internal/memutil.h
+    absl/strings/internal/memutil.cc
+    absl/strings/internal/charconv_parse.h
+    absl/strings/internal/charconv_parse.cc
+    absl/strings/internal/charconv_bigint.h
+    absl/strings/internal/charconv_bigint.cc
+    absl/strings/internal/str_format/float_conversion.h
+    absl/strings/internal/str_format/float_conversion.cc
+    absl/strings/internal/str_format/bind.h
+    absl/strings/internal/str_format/bind.cc
+    absl/strings/internal/str_format/parser.h
+    absl/strings/internal/str_format/parser.cc
+    absl/strings/internal/str_format/extension.h
+    absl/strings/internal/str_format/extension.cc
+    absl/strings/internal/str_format/output.h
+    absl/strings/internal/str_format/output.cc
+    absl/strings/internal/str_format/arg.h
+    absl/strings/internal/str_format/arg.cc
+    absl/strings/numbers.h
+    absl/strings/numbers.cc
+    absl/strings/charconv.h
+    absl/strings/charconv.cc
+    absl/synchronization/mutex.h
+    absl/synchronization/mutex.cc
+    absl/synchronization/internal/graphcycles.h
+    absl/synchronization/internal/graphcycles.cc
+    absl/hash/internal/hash.h
+    absl/hash/internal/hash.cc
+    absl/hash/internal/city.h
+    absl/hash/internal/city.cc
+    absl/hash/internal/low_level_hash.h
+    absl/hash/internal/low_level_hash.cc
+    absl/container/internal/raw_hash_set.h
+    absl/container/internal/raw_hash_set.cc
+    absl/time/clock.h
+    absl/time/clock.cc
+    absl/time/duration.cc
+    absl/time/time.h
+    absl/time/time.cc
+    absl/time/internal/cctz/src/time_zone_lookup.cc
+    absl/time/internal/cctz/src/time_zone_impl.h
+    absl/time/internal/cctz/src/time_zone_impl.cc
+    absl/time/internal/cctz/src/time_zone_fixed.h
+    absl/time/internal/cctz/src/time_zone_fixed.cc
+    absl/time/internal/cctz/src/time_zone_if.h
+    absl/time/internal/cctz/src/time_zone_if.cc
+    absl/time/internal/cctz/src/time_zone_info.h
+    absl/time/internal/cctz/src/time_zone_info.cc
+    absl/time/internal/cctz/src/time_zone_libc.h
+    absl/time/internal/cctz/src/time_zone_libc.cc
+    absl/time/internal/cctz/src/time_zone_posix.cc
+    absl/time/internal/cctz/src/zone_info_source.cc
+    absl/synchronization/internal/per_thread_sem.h
+    absl/synchronization/internal/per_thread_sem.cc
+    absl/synchronization/internal/create_thread_identity.cc
+    absl/synchronization/internal/waiter.h
+    absl/synchronization/internal/waiter.cc
+    absl/debugging/stacktrace.h
+    absl/debugging/stacktrace.cc
+    absl/debugging/symbolize.h
+    absl/debugging/symbolize.cc
+    absl/debugging/internal/demangle.h
+    absl/debugging/internal/demangle.cc
+    absl/numeric/int128.h
+    absl/numeric/int128.cc
+)
