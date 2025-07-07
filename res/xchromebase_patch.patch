@@ -1,0 +1,300 @@
+diff --git forkSrcPrefix/base/location.cc forkDstPrefix/base/location.cc
+index c49a31d5adad6c952ec08bcf4d007d2a64a4308f..f9b4451da29c9337b617cfc8cd40fbcb24930fa9 100644
+--- forkSrcPrefix/base/location.cc
++++ forkDstPrefix/base/location.cc
+@@ -69,8 +69,8 @@ constexpr bool StrEndsWith(const char* name,
+   return true;
+ }
+ 
+-static_assert(StrEndsWith(__FILE__, kStrippedPrefixLength, "base/location.cc"),
+-              "The file name does not match the expected prefix format.");
++//static_assert(StrEndsWith(__FILE__, kStrippedPrefixLength, "base/location.cc"),
++//              "The file name does not match the expected prefix format.");
+ 
+ }  // namespace
+ 
+diff --git forkSrcPrefix/base/trace_event/trace_event_stub.cc forkDstPrefix/base/trace_event/trace_event_stub.cc
+index f227101ea4dbc63b03604af7122253f0da158294..4c1f7e85f570f77223b7a80aa394caebe86a9dd7 100644
+--- forkSrcPrefix/base/trace_event/trace_event_stub.cc
++++ forkDstPrefix/base/trace_event/trace_event_stub.cc
+@@ -22,39 +22,3 @@ constexpr const char* const MemoryDumpManager::kTraceCategory;
+ 
+ }  // namespace trace_event
+ }  // namespace base
+-
+-namespace perfetto {
+-
+-TracedDictionary TracedValue::WriteDictionary() && {
+-  return TracedDictionary();
+-}
+-
+-TracedArray TracedValue::WriteArray() && {
+-  return TracedArray();
+-}
+-
+-TracedArray TracedDictionary::AddArray(StaticString) {
+-  return TracedArray();
+-}
+-
+-TracedArray TracedDictionary::AddArray(DynamicString) {
+-  return TracedArray();
+-}
+-
+-TracedDictionary TracedDictionary::AddDictionary(StaticString) {
+-  return TracedDictionary();
+-}
+-
+-TracedDictionary TracedDictionary::AddDictionary(DynamicString) {
+-  return TracedDictionary();
+-}
+-
+-TracedArray TracedArray::AppendArray() {
+-  return TracedArray();
+-}
+-
+-TracedDictionary TracedArray::AppendDictionary() {
+-  return TracedDictionary();
+-}
+-
+-}  // namespace perfetto
+diff --git forkSrcPrefix/base/time/time_win.cc forkDstPrefix/base/time/time_win.cc
+index eabcc10ad2c31675522cb3fa64475de8d3334e20..f19efb530c8ce74e71f99a7549cff69cbb9ce5b0 100644
+--- forkSrcPrefix/base/time/time_win.cc
++++ forkDstPrefix/base/time/time_win.cc
+@@ -433,7 +433,7 @@ static_assert(
+ // rollover ourselves, which works if TimeTicks::Now() is called at least every
+ // 48.8 days (not 49 days because only changes in the top 8 bits get noticed).
+ TimeTicks RolloverProtectedNow() {
+-  LastTimeAndRolloversState state;
++  LastTimeAndRolloversState state{};
+   DWORD now;  // DWORD is always unsigned 32 bits.
+ 
+   while (true) {
+diff --git forkSrcPrefix/base/task/thread_pool/thread_group_impl.cc forkDstPrefix/base/task/thread_pool/thread_group_impl.cc
+index 55e654f7abc47bded0d3e01442925927dd2dde65..89b3d7bee93e982352831e2d2a17cca0406503ab 100644
+--- forkSrcPrefix/base/task/thread_pool/thread_group_impl.cc
++++ forkDstPrefix/base/task/thread_pool/thread_group_impl.cc
+@@ -15,7 +15,7 @@
+ #include "base/bind.h"
+ #include "base/callback_helpers.h"
+ #include "base/compiler_specific.h"
+-#include "base/containers/stack_container.h"
++#include "third_party/abseil-cpp/absl/container/flat_hash_set.h"
+ #include "base/feature_list.h"
+ #include "base/location.h"
+ #include "base/memory/ptr_util.h"
+@@ -97,7 +97,7 @@ bool ContainsWorker(const std::vector<scoped_refptr<WorkerThread>>& workers,
+ class ThreadGroupImpl::ScopedCommandsExecutor
+     : public ThreadGroup::BaseScopedCommandsExecutor {
+  public:
+-  explicit ScopedCommandsExecutor(ThreadGroupImpl* outer) : outer_(outer) {}
++  explicit ScopedCommandsExecutor(ThreadGroupImpl* outer) : outer_(outer){}
+ 
+   ScopedCommandsExecutor(const ScopedCommandsExecutor&) = delete;
+   ScopedCommandsExecutor& operator=(const ScopedCommandsExecutor&) = delete;
+@@ -128,7 +128,7 @@ class ThreadGroupImpl::ScopedCommandsExecutor
+ 
+   void ScheduleAddHistogramSample(HistogramBase* histogram,
+                                   HistogramBase::Sample sample) {
+-    scheduled_histogram_samples_->emplace_back(histogram, sample);
++      scheduled_histogram_samples_.emplace(histogram, sample);
+   }
+ 
+  private:
+@@ -191,12 +191,12 @@ class ThreadGroupImpl::ScopedCommandsExecutor
+     if (must_schedule_adjust_max_tasks_)
+       outer_->ScheduleAdjustMaxTasks();
+ 
+-    if (!scheduled_histogram_samples_->empty()) {
+-      DCHECK_LE(scheduled_histogram_samples_->size(),
++    if (!scheduled_histogram_samples_.empty()) {
++      DCHECK_LE(scheduled_histogram_samples_.size(),
+                 kHistogramSampleStackSize);
+       for (auto& scheduled_sample : scheduled_histogram_samples_)
+         scheduled_sample.first->Add(scheduled_sample.second);
+-      scheduled_histogram_samples_->clear();
++      scheduled_histogram_samples_.clear();
+     }
+   }
+ 
+@@ -210,8 +210,7 @@ class ThreadGroupImpl::ScopedCommandsExecutor
+   // high enough to store the maximum number of histogram samples added to a
+   // given ScopedCommandsExecutor instance.
+   static constexpr size_t kHistogramSampleStackSize = 5;
+-  StackVector<std::pair<HistogramBase*, HistogramBase::Sample>,
+-              kHistogramSampleStackSize>
++  absl::flat_hash_set<std::pair<HistogramBase*, HistogramBase::Sample>>
+       scheduled_histogram_samples_;
+ };
+ 
+diff --git forkSrcPrefix/base/task/sequence_manager/work_queue.cc forkDstPrefix/base/task/sequence_manager/work_queue.cc
+index 55c77c682efed397fe7fcbb52551474078fcd496..b06234647544786306df18808fa1d5fbf743d0e5 100644
+--- forkSrcPrefix/base/task/sequence_manager/work_queue.cc
++++ forkDstPrefix/base/task/sequence_manager/work_queue.cc
+@@ -4,13 +4,13 @@
+ 
+ #include "base/task/sequence_manager/work_queue.h"
+ 
+-#include "base/containers/stack_container.h"
+ #include "base/debug/alias.h"
+ #include "base/task/sequence_manager/fence.h"
+ #include "base/task/sequence_manager/sequence_manager_impl.h"
+ #include "base/task/sequence_manager/task_order.h"
+ #include "base/task/sequence_manager/work_queue_sets.h"
+ #include "build/build_config.h"
++#include "third_party/abseil-cpp/absl/container/inlined_vector.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ 
+ namespace base {
+@@ -226,16 +226,16 @@ bool WorkQueue::RemoveAllCanceledTasksFromFront() {
+   // Since task destructors could have a side-effect of deleting this task queue
+   // we move cancelled tasks into a temporary container which can be emptied
+   // without accessing |this|.
+-  StackVector<Task, 8> tasks_to_delete;
++  absl::InlinedVector<Task, 8> tasks_to_delete;
+ 
+   while (!tasks_.empty()) {
+     const auto& pending_task = tasks_.front();
+     if (pending_task.task && !pending_task.IsCanceled())
+       break;
+-    tasks_to_delete->push_back(std::move(tasks_.front()));
++    tasks_to_delete.push_back(std::move(tasks_.front()));
+     tasks_.pop_front();
+   }
+-  if (!tasks_to_delete->empty()) {
++  if (!tasks_to_delete.empty()) {
+     if (tasks_.empty()) {
+       // NB delayed tasks are inserted via Push, no don't need to reload those.
+       if (queue_type_ == QueueType::kImmediate) {
+@@ -253,7 +253,7 @@ bool WorkQueue::RemoveAllCanceledTasksFromFront() {
+       work_queue_sets_->OnQueuesFrontTaskChanged(this);
+     task_queue_->TraceQueueSize();
+   }
+-  return !tasks_to_delete->empty();
++  return !tasks_to_delete.empty();
+ }
+ 
+ void WorkQueue::AssignToWorkQueueSets(WorkQueueSets* work_queue_sets) {
+diff --git forkSrcPrefix/base/task/sequence_manager/task_queue_impl.cc forkDstPrefix/base/task/sequence_manager/task_queue_impl.cc
+index 25c9633cdad7a3ade404806bff8181b53853449c..7f65d56c6206a1c4b22d54e720c8e1ad87d919d3 100644
+--- forkSrcPrefix/base/task/sequence_manager/task_queue_impl.cc
++++ forkDstPrefix/base/task/sequence_manager/task_queue_impl.cc
+@@ -11,7 +11,6 @@
+ 
+ #include "base/check.h"
+ #include "base/compiler_specific.h"
+-#include "base/containers/stack_container.h"
+ #include "base/feature_list.h"
+ #include "base/logging.h"
+ #include "base/memory/scoped_refptr.h"
+@@ -34,6 +33,7 @@
+ #include "base/time/time.h"
+ #include "base/trace_event/base_tracing.h"
+ #include "build/build_config.h"
++#include "third_party/abseil-cpp/absl/container/inlined_vector.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ 
+ namespace base {
+@@ -687,7 +687,7 @@ bool TaskQueueImpl::RemoveAllCanceledDelayedTasksFromFront(LazyNow* lazy_now) {
+   // Because task destructors could have a side-effect of posting new tasks, we
+   // move all the cancelled tasks into a temporary container before deleting
+   // them. This is to avoid the queue from changing while iterating over it.
+-  StackVector<Task, 8> tasks_to_delete;
++  absl::InlinedVector<Task, 8> tasks_to_delete;
+ 
+   while (!main_thread_only().delayed_incoming_queue.empty()) {
+     const Task& task = main_thread_only().delayed_incoming_queue.top();
+@@ -695,11 +695,11 @@ bool TaskQueueImpl::RemoveAllCanceledDelayedTasksFromFront(LazyNow* lazy_now) {
+     if (!task.task.IsCancelled())
+       break;
+ 
+-    tasks_to_delete->push_back(
++    tasks_to_delete.push_back(
+         main_thread_only().delayed_incoming_queue.take_top());
+   }
+ 
+-  if (!tasks_to_delete->empty()) {
++  if (!tasks_to_delete.empty()) {
+     UpdateWakeUp(lazy_now);
+     return true;
+   }
+@@ -718,7 +718,7 @@ void TaskQueueImpl::MoveReadyDelayedTasksToWorkQueue(
+   // Because task destructors could have a side-effect of posting new tasks, we
+   // move all the cancelled tasks into a temporary container before deleting
+   // them. This is to avoid the queue from changing while iterating over it.
+-  StackVector<Task, 8> tasks_to_delete;
++  absl::InlinedVector<Task, 8> tasks_to_delete;
+ 
+   while (!main_thread_only().delayed_incoming_queue.empty()) {
+     const Task& task = main_thread_only().delayed_incoming_queue.top();
+@@ -731,7 +731,7 @@ void TaskQueueImpl::MoveReadyDelayedTasksToWorkQueue(
+ 
+     Task ready_task = main_thread_only().delayed_incoming_queue.take_top();
+     if (is_cancelled) {
+-      tasks_to_delete->push_back(std::move(ready_task));
++      tasks_to_delete.push_back(std::move(ready_task));
+       continue;
+     }
+ 
+@@ -750,7 +750,7 @@ void TaskQueueImpl::MoveReadyDelayedTasksToWorkQueue(
+   }
+ 
+   // Explicitly delete tasks last.
+-  tasks_to_delete->clear();
++  tasks_to_delete.clear();
+ 
+   UpdateWakeUp(lazy_now);
+ }
+diff --git forkSrcPrefix/base/strings/string_util_internal.h forkDstPrefix/base/strings/string_util_internal.h
+index eb2ca21cd0a9fe6356fbcdab01e31f4ec31f8799..bad7eca7e0112c8feeb44e3330fc344ccb7c237d 100644
+--- forkSrcPrefix/base/strings/string_util_internal.h
++++ forkDstPrefix/base/strings/string_util_internal.h
+@@ -580,7 +580,7 @@ std::basic_string<CharT> DoReplaceStringPlaceholders(
+           --i;
+         } else {
+           if (*i < '1' || *i > '9') {
+-            DLOG(ERROR) << "Invalid placeholder: $" << *i;
++            //DLOG(ERROR) << "Invalid placeholder: $" << *i;
+             continue;
+           }
+           uintptr_t index = *i - '1';
+diff --git forkSrcPrefix/base/containers/intrusive_heap.h forkDstPrefix/base/containers/intrusive_heap.h
+index 2a12d107f618a8e5e577bcdf4d18fac669b37868..d8c74b8186944f314871fde9b5b3229c48961f63 100644
+--- forkSrcPrefix/base/containers/intrusive_heap.h
++++ forkDstPrefix/base/containers/intrusive_heap.h
+@@ -140,7 +140,7 @@
+ #include "base/base_export.h"
+ #include "base/check.h"
+ #include "base/check_op.h"
+-#include "base/containers/stack_container.h"
++#include "third_party/abseil-cpp/absl/container/inlined_vector.h"
+ #include "base/memory/ptr_util.h"
+ #include "base/ranges/algorithm.h"
+ 
+@@ -431,14 +431,14 @@ class IntrusiveHeap {
+     // elements to be erased into a temporary container before deleting them.
+     // This is to avoid changing the underlying container during the erase()
+     // call.
+-    StackVector<value_type, 8> elements_to_delete;
++    absl::InlinedVector<value_type, 8> elements_to_delete;
+     std::move(erase_start, impl_.heap_.end(),
+-              std::back_inserter(elements_to_delete.container()));
++              std::back_inserter(elements_to_delete));
+ 
+     impl_.heap_.erase(erase_start, impl_.heap_.end());
+ 
+     // If no elements were removed, then the heap is still intact.
+-    if (elements_to_delete->empty())
++    if (elements_to_delete.empty())
+       return;
+ 
+     // Repair the heap and ensure handles are pointing to the right index.
+@@ -447,7 +447,7 @@ class IntrusiveHeap {
+       SetHeapHandle(i);
+ 
+     // Explicitly delete elements last.
+-    elements_to_delete->clear();
++    elements_to_delete.clear();
+   }
+ 
+   //////////////////////////////////////////////////////////////////////////////
